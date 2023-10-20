@@ -59,7 +59,7 @@
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 import os
-from zad1 import tofloat
+from zad1.zad1 import tofloat
 
 
 def intersection(A: list[int], B: list[int], C: list[int], D: list[int]) -> list[int]:
