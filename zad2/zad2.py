@@ -59,7 +59,15 @@
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 import os
-from zad1.zad1 import tofloat
+
+def tofloat(numbers: list[str]) -> list[float]:
+    try:
+        retv = [float(x) for x in numbers]
+        if len(retv) != 2:
+            raise ValueError
+        return retv
+    except ValueError:
+        raise ValueError("Podano błędne dane")
 
 
 def intersection(A: list[int], B: list[int], C: list[int], D: list[int]) -> list[int]:
