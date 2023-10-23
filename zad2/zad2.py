@@ -112,13 +112,40 @@ def btn_update(graph_img: sg.Image, window: sg.Window):
         c_float = tofloat([window['cx'].get(), window['cy'].get()])
         d_float = tofloat([window['dx'].get(), window['dy'].get()])
     except ValueError:
-        sg.popup_error('Podano błędne dane')
+        sg.popup_error('Podano bledne dane')
         return
     p = intersection(a_float, b_float, c_float, d_float)
     if p is None:
-        sg.popup_error('Nie ma punktu przecięcia')
+        sg.popup_error('Nie ma punktu przeciecia')
         return
     update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get())
+
+# update the plot with data from a file
+def file_update(graph_img: sg.Image, window: sg.Window, filename: str, ab_color: str, cd_color: str):
+    try:
+        # read data from file
+        with open(filename, 'r') as f:
+            data = f.readlines()
+    except FileNotFoundError:
+        sg.popup_error('Nie znaleziono pliku')
+        return
+    # check if data is correct
+    if len(data) != 4:
+        sg.popup_error('Plik zawiera bledne dane')
+        return
+    try:
+        a_float = tofloat(data[0].split())
+        b_float = tofloat(data[1].split())
+        c_float = tofloat(data[2].split())
+        d_float = tofloat(data[3].split())
+    except ValueError:
+        sg.popup_error('Plik zawiera bledne dane')
+        return
+    p = intersection(a_float, b_float, c_float, d_float)
+    if p is None:
+        sg.popup_error('Nie ma punktu przeciecia')
+        return
+    update_plot(graph_img, a_float, b_float, c_float, d_float, p, ab_color, cd_color)
   
 
 def main():
@@ -141,6 +168,9 @@ def main():
     colors = ['red', 'blue', 'green', 'yellow', 'black', 'white']
     ab_color_combo = sg.Combo(colors, default_value='red', key='ab_color', size=(10, 4), font=('Helvetica', 12))
     cd_color_combo = sg.Combo(colors, default_value='blue', key='cd_color', size=(10, 4), font=('Helvetica', 12))
+    # load data from a file button, accepted file format: .txt
+    wczytaj = sg.FileBrowse('Wczytaj dane z pliku', file_types=(('Pliki tekstowe', '*.txt'),), key='wczytaj')
+    nazwa_pliku = sg.InputText(size=(10, 1), key='nazwa_pliku')
     oblicz = sg.Button('Oblicz')
 
     graph_img: sg.Image = None
@@ -160,9 +190,11 @@ def main():
                 [sg.Text('Podaj wspolrzedne punktu D'), D],
                 [graph_img],
                 [sg.Text('Kolor odcinka AB'), ab_color_combo, sg.Text('Kolor odcinka CD'), cd_color_combo],
+                [wczytaj, nazwa_pliku],
                 [oblicz]]
     
     window = sg.Window('Zadanie 2', layout, background_color='lightblue').Finalize()
+
     # try to read stdin
     a = input().split()
     b = input().split()
@@ -188,7 +220,13 @@ def main():
         if event == sg.WIN_CLOSED:
             break
         elif event == 'Oblicz':
-            btn_update(graph_img, window)
+            if values['nazwa_pliku'] != '':
+                file_update(graph_img, window, values['nazwa_pliku'], values['ab_color'], values['cd_color'])
+                # clear the input
+                window['nazwa_pliku'].update('')
+            else:
+                btn_update(graph_img, window)
+
         
 
 if __name__ == "__main__":
