@@ -176,11 +176,11 @@ def main():
             c_float = tofloat(c)
             d_float = tofloat(d)
         except ValueError:
-            sg.popup_error('Podano błędne dane')
+            sg.popup_error('Podano bledne dane')
             return
         p = intersection(a_float, b_float, c_float, d_float)
         if p is None:
-            sg.popup_error('Nie ma punktu przecięcia')
+            sg.popup_error('Nie ma punktu przeciecia')
             return
         update_plot(graph_img, a_float, b_float, c_float, d_float, p, ab_color, cd_color)
     while True:
