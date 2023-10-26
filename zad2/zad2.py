@@ -89,20 +89,23 @@ def intersection(A: list[int], B: list[int], C: list[int], D: list[int]) -> list
         return None
 
 def update_plot(graph_img, a: list[int], b: list[int], c: list[int], d: list[int], p: list[int],
-                ab_color='red', cd_color='blue'):
+                ab_color='red', cd_color='blue', labels=True, ab_linewidth=2, cd_linewidth=2):
     plt.clf()
-    plt.plot([a[0], b[0]], [a[1], b[1]], ab_color, label='AB')
-    plt.plot([c[0], d[0]], [c[1], d[1]], cd_color, label='CD')
-    plt.text(a[0], a[1], 'A', color=ab_color, fontsize=12)
-    plt.text(b[0], b[1], 'B', color=ab_color, fontsize=12)
-    plt.text(c[0], c[1], 'C', color=cd_color, fontsize=12)
-    plt.text(d[0], d[1], 'D', color=cd_color, fontsize=12)
+    plt.plot([a[0], b[0]], [a[1], b[1]], ab_color, label='AB', linewidth=ab_linewidth)
+    plt.plot([c[0], d[0]], [c[1], d[1]], cd_color, label='CD', linewidth=cd_linewidth)
+    if labels:
+        plt.text(a[0], a[1], 'A', color=ab_color, fontsize=12)
+        plt.text(b[0], b[1], 'B', color=ab_color, fontsize=12)
+        plt.text(c[0], c[1], 'C', color=cd_color, fontsize=12)
+        plt.text(d[0], d[1], 'D', color=cd_color, fontsize=12)
     if p is not None:
         plt.plot(p[0], p[1], 'go', label='P')
-        plt.text(p[0], p[1], 'P', color='green', fontsize=12)
+        if labels:
+            plt.text(p[0], p[1], 'P', color='green', fontsize=12)
     plt.legend()
     plt.savefig('graph.png')
     graph_img.update(filename='graph.png')
+    os.remove('graph.png')
 
 
 def btn_update(graph_img: sg.Image, window: sg.Window):
@@ -118,7 +121,8 @@ def btn_update(graph_img: sg.Image, window: sg.Window):
     if p is None:
         sg.popup_error('Nie ma punktu przeciecia')
         return
-    update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get())
+    update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
+                labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
 
 # update the plot with data from a file
 def file_update(graph_img: sg.Image, window: sg.Window, filename: str, ab_color: str, cd_color: str):
@@ -141,11 +145,21 @@ def file_update(graph_img: sg.Image, window: sg.Window, filename: str, ab_color:
     except ValueError:
         sg.popup_error('Plik zawiera bledne dane')
         return
+    # set ax, ay, bx, by, cx, cy, dx, dy
+    window['ax'].update(a_float[0])
+    window['ay'].update(a_float[1])
+    window['bx'].update(b_float[0])
+    window['by'].update(b_float[1])
+    window['cx'].update(c_float[0])
+    window['cy'].update(c_float[1])
+    window['dx'].update(d_float[0])
+    window['dy'].update(d_float[1])
     p = intersection(a_float, b_float, c_float, d_float)
     if p is None:
         sg.popup_error('Nie ma punktu przeciecia')
         return
-    update_plot(graph_img, a_float, b_float, c_float, d_float, p, ab_color, cd_color)
+    update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
+                labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
   
 
 def main():
@@ -168,57 +182,41 @@ def main():
     colors = ['red', 'blue', 'green', 'yellow', 'black', 'white']
     ab_color_combo = sg.Combo(colors, default_value='red', key='ab_color', size=(10, 4), font=('Helvetica', 12))
     cd_color_combo = sg.Combo(colors, default_value='blue', key='cd_color', size=(10, 4), font=('Helvetica', 12))
+    # line width
+    ab_line_width = sg.Combo(list(range(1,11)), default_value=2, key='ab_line_width', size=(10, 4), font=('Helvetica', 12))
+    cd_line_width = sg.Combo(list(range(1,11)), default_value=2, key='cd_line_width', size=(10, 4), font=('Helvetica', 12))
+    oznaczenia = sg.Checkbox('Oznaczenia', default=True, key='oznaczenia')
     # load data from a file button, accepted file format: .txt
     wczytaj = sg.FileBrowse('Wczytaj dane z pliku', file_types=(('Pliki tekstowe', '*.txt'),), key='wczytaj')
     nazwa_pliku = sg.InputText(size=(10, 1), key='nazwa_pliku')
-    oblicz = sg.Button('Oblicz')
+    oblicz = sg.Button('Oblicz', key='Oblicz')
 
     graph_img: sg.Image = None
 
     # check if graph.png exists
-    if not os.path.isfile('graph.png'):
-        # set a default white background figure
-        plt.plot(0, 0)
-        plt.savefig('graph.png')
-        graph_img = sg.Image(filename='graph.png', key='graph')
-    else:
-        graph_img = sg.Image(filename='graph.png', key='graph')
+    if os.path.isfile('graph.png'):
+        os.remove('graph.png')
+    plt.plot(0, 0)
+    plt.savefig('graph.png')
+    graph_img = sg.Image(filename='graph.png', key='graph')
 
     layout = [[sg.Text('Podaj wspolrzedne punktu A'), A],
                 [sg.Text('Podaj wspolrzedne punktu B'), B],
                 [sg.Text('Podaj wspolrzedne punktu C'), C],
                 [sg.Text('Podaj wspolrzedne punktu D'), D],
                 [graph_img],
-                [sg.Text('Kolor odcinka AB'), ab_color_combo, sg.Text('Kolor odcinka CD'), cd_color_combo],
+                [sg.Text('Kolor odcinka AB'), ab_color_combo, ab_line_width, sg.Text('Kolor odcinka CD'), cd_color_combo, cd_line_width, oznaczenia],
                 [wczytaj, nazwa_pliku],
                 [oblicz]]
     
     window = sg.Window('Zadanie 2', layout, background_color='lightblue').Finalize()
 
-    # try to read stdin
-    a = input().split()
-    b = input().split()
-    c = input().split()
-    d = input().split()
-
-    if len(a) == 2 and len(b) == 2 and len(c) == 2 and len(d) == 2:
-        try:
-            a_float = tofloat(a)
-            b_float = tofloat(b)
-            c_float = tofloat(c)
-            d_float = tofloat(d)
-        except ValueError:
-            sg.popup_error('Podano bledne dane')
-            return
-        p = intersection(a_float, b_float, c_float, d_float)
-        if p is None:
-            sg.popup_error('Nie ma punktu przeciecia')
-            return
-        update_plot(graph_img, a_float, b_float, c_float, d_float, p, ab_color, cd_color)
     while True:
         event, values = window.read()
         if event == sg.WIN_CLOSED:
             break
+        
+        # if the button is clicked
         elif event == 'Oblicz':
             if values['nazwa_pliku'] != '':
                 file_update(graph_img, window, values['nazwa_pliku'], values['ab_color'], values['cd_color'])
@@ -226,7 +224,6 @@ def main():
                 window['nazwa_pliku'].update('')
             else:
                 btn_update(graph_img, window)
-
         
 
 if __name__ == "__main__":
