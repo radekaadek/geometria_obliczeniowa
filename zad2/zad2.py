@@ -121,8 +121,11 @@ def btn_update(graph_img: sg.Image, window: sg.Window):
     if p is None:
         sg.popup_error('Nie ma punktu przeciecia')
         return
-    update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
-                labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
+    else:
+        window['px'].update(p[0])
+        window['py'].update(p[1])
+        update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
+                    labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
 
 # update the plot with data from a file
 def file_update(graph_img: sg.Image, window: sg.Window, filename: str, ab_color: str, cd_color: str):
@@ -158,13 +161,14 @@ def file_update(graph_img: sg.Image, window: sg.Window, filename: str, ab_color:
     if p is None:
         sg.popup_error('Nie ma punktu przeciecia')
         return
-    update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
-                labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
+    else:
+        window['px'].update(p[0])
+        window['py'].update(p[1])
+        update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
+                    labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
   
 
 def main():
-    ab_color = 'red'
-    cd_color = 'blue'
     # stworzenie okna z miejscami na wprowadzenie danych oraz wykres
     ax = sg.InputText(size=(10, 1), key='ax')
     ay = sg.InputText(size=(10, 1), key='ay')
@@ -174,10 +178,13 @@ def main():
     cy = sg.InputText(size=(10, 1), key='cy')
     dx = sg.InputText(size=(10, 1), key='dx')
     dy = sg.InputText(size=(10, 1), key='dy')
+    px = sg.InputText(size=(10, 1), key='px')
+    py = sg.InputText(size=(10, 1), key='py')
     A = sg.Frame('A', [[ax, ay]])
     B = sg.Frame('B', [[bx, by]])
     C = sg.Frame('C', [[cx, cy]])
     D = sg.Frame('D', [[dx, dy]])
+    P = sg.Frame('P', [[px, py]])
     # change color of button
     colors = ['red', 'blue', 'green', 'yellow', 'black', 'white']
     ab_color_combo = sg.Combo(colors, default_value='red', key='ab_color', size=(10, 4), font=('Helvetica', 12))
@@ -188,7 +195,9 @@ def main():
     oznaczenia = sg.Checkbox('Oznaczenia', default=True, key='oznaczenia')
     # load data from a file button, accepted file format: .txt
     wczytaj = sg.FileBrowse('Wczytaj dane z pliku', file_types=(('Pliki tekstowe', '*.txt'),), key='wczytaj')
+    zapisz = sg.FileSaveAs('Zapisz obliczenia do pliku', file_types=(('Pliki tekstowe', '*.txt'),), key='zapisz')
     nazwa_pliku = sg.InputText(size=(10, 1), key='nazwa_pliku')
+    zapisz_nazwa_pliku = sg.InputText(size=(10, 1), key='zapisz_nazwa_pliku')
     oblicz = sg.Button('Oblicz', key='Oblicz')
 
     graph_img: sg.Image = None
@@ -200,20 +209,24 @@ def main():
     plt.savefig('graph.png')
     graph_img = sg.Image(filename='graph.png', key='graph')
 
-    layout = [[sg.Text('Podaj wspolrzedne punktu A'), A],
-                [sg.Text('Podaj wspolrzedne punktu B'), B],
-                [sg.Text('Podaj wspolrzedne punktu C'), C],
-                [sg.Text('Podaj wspolrzedne punktu D'), D],
+    layout = [[sg.Text('Podaj wspolrzedne punktu A'), A, sg.Text('Podaj wspolrzedne punktu B'), B],
+                [sg.Text('Podaj wspolrzedne punktu C'), C, sg.Text('Podaj wspolrzedne punktu D'), D],
+                [sg.Text('Wspolrzedne punktu P'), P],
                 [graph_img],
                 [sg.Text('Kolor odcinka AB'), ab_color_combo, ab_line_width, sg.Text('Kolor odcinka CD'), cd_color_combo, cd_line_width, oznaczenia],
                 [wczytaj, nazwa_pliku],
+                [zapisz, zapisz_nazwa_pliku],
                 [oblicz]]
     
-    window = sg.Window('Zadanie 2', layout, background_color='lightblue').Finalize()
+    window = sg.Window('Zadanie 2', layout)
+    # set window theme
+    window.finalize()
 
     while True:
         event, values = window.read()
         if event == sg.WIN_CLOSED:
+            if os.path.isfile('graph.png'):
+                os.remove('graph.png')
             break
         
         # if the button is clicked
@@ -224,7 +237,16 @@ def main():
                 window['nazwa_pliku'].update('')
             else:
                 btn_update(graph_img, window)
-        
+        if values['zapisz_nazwa_pliku'] != '':
+            print(values['zapisz_nazwa_pliku'])
+            with open(values['zapisz_nazwa_pliku'], 'w') as f:
+                f.write(f'{values["ax"]} {values["ay"]}\n')
+                f.write(f'{values["bx"]} {values["by"]}\n')
+                f.write(f'{values["cx"]} {values["cy"]}\n')
+                f.write(f'{values["dx"]} {values["dy"]}\n')
+                f.write(f'{values["px"]} {values["py"]}\n')
+            window['zapisz_nazwa_pliku'].update('')
+
 
 if __name__ == "__main__":
     main()
