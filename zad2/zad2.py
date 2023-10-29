@@ -128,7 +128,10 @@ def btn_update(graph_img: sg.Image, window: sg.Window):
                     labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
 
 # update the plot with data from a file
-def file_update(graph_img: sg.Image, window: sg.Window, filename: str, ab_color: str, cd_color: str):
+def file_update(graph_img: sg.Image, window: sg.Window, ab_color: str, cd_color: str):
+    filename = sg.popup_get_file('Wybierz plik', file_types=(('Pliki tekstowe', '*.txt'),))
+    if filename is None or filename == '':
+        return
     try:
         # read data from file
         with open(filename, 'r') as f:
@@ -186,18 +189,18 @@ def main():
     D = sg.Frame('D', [[dx, dy]])
     P = sg.Frame('P', [[px, py]])
     # change color of button
-    colors = ['red', 'blue', 'green', 'yellow', 'black', 'white']
-    ab_color_combo = sg.Combo(colors, default_value='red', key='ab_color', size=(10, 4), font=('Helvetica', 12))
+    colors = ['magenta', 'red', 'blue', 'green', 'yellow', 'black', 'white']
+    ab_color_combo = sg.Combo(colors, default_value='magenta', key='ab_color', size=(10, 4), font=('Helvetica', 12))
     cd_color_combo = sg.Combo(colors, default_value='blue', key='cd_color', size=(10, 4), font=('Helvetica', 12))
     # line width
     ab_line_width = sg.Combo(list(range(1,11)), default_value=2, key='ab_line_width', size=(10, 4), font=('Helvetica', 12))
     cd_line_width = sg.Combo(list(range(1,11)), default_value=2, key='cd_line_width', size=(10, 4), font=('Helvetica', 12))
     oznaczenia = sg.Checkbox('Oznaczenia', default=True, key='oznaczenia')
     # load data from a file button, accepted file format: .txt
-    wczytaj = sg.FileBrowse('Wczytaj dane z pliku', file_types=(('Pliki tekstowe', '*.txt'),), key='wczytaj')
-    zapisz = sg.FileSaveAs('Zapisz obliczenia do pliku', file_types=(('Pliki tekstowe', '*.txt'),), key='zapisz')
-    nazwa_pliku = sg.InputText(size=(10, 1), key='nazwa_pliku')
-    zapisz_nazwa_pliku = sg.InputText(size=(10, 1), key='zapisz_nazwa_pliku')
+    wczytaj = sg.Button('Wczytaj dane z pliku', key='wczytaj')
+    zapisz = sg.FileSaveAs('Wybierz plik do zapisania danych', file_types=(('Pliki tekstowe', '*.txt'),), key='zapisz')
+    zapisz_button = sg.Button('Zapisz', key='zapisz_button')
+    zapisz_nazwa_pliku = sg.InputText(sg.user_settings_get_entry('-filename-', ''), key='zapisz_nazwa_pliku', size=(30, 1))
     oblicz = sg.Button('Oblicz', key='Oblicz')
 
     graph_img: sg.Image = None
@@ -214,8 +217,8 @@ def main():
                 [sg.Text('Wspolrzedne punktu P'), P],
                 [graph_img],
                 [sg.Text('Kolor odcinka AB'), ab_color_combo, ab_line_width, sg.Text('Kolor odcinka CD'), cd_color_combo, cd_line_width, oznaczenia],
-                [wczytaj, nazwa_pliku],
-                [zapisz, zapisz_nazwa_pliku],
+                [wczytaj],
+                [sg.Text('Nazwa pliku do zapisu:'), zapisz_nazwa_pliku, zapisz, zapisz_button],
                 [oblicz]]
     
     window = sg.Window('Zadanie 2', layout)
@@ -228,24 +231,24 @@ def main():
             if os.path.isfile('graph.png'):
                 os.remove('graph.png')
             break
-        
-        # if the button is clicked
-        elif event == 'Oblicz':
-            if values['nazwa_pliku'] != '':
-                file_update(graph_img, window, values['nazwa_pliku'], values['ab_color'], values['cd_color'])
-                # clear the input
-                window['nazwa_pliku'].update('')
-            else:
-                btn_update(graph_img, window)
-        if values['zapisz_nazwa_pliku'] != '':
-            print(values['zapisz_nazwa_pliku'])
-            with open(values['zapisz_nazwa_pliku'], 'w') as f:
-                f.write(f'{values["ax"]} {values["ay"]}\n')
-                f.write(f'{values["bx"]} {values["by"]}\n')
-                f.write(f'{values["cx"]} {values["cy"]}\n')
-                f.write(f'{values["dx"]} {values["dy"]}\n')
-                f.write(f'{values["px"]} {values["py"]}\n')
+        if event == 'Oblicz':
+            btn_update(graph_img, window)
+        elif event == 'wczytaj':
+            file_update(graph_img, window, values['ab_color'], values['cd_color'])
+        elif event == 'wczytaj':
+            print(values['wczytaj'])
+        elif event == 'zapisz_button':
+            try:
+                with open(values['zapisz_nazwa_pliku'], 'w') as f:
+                    f.write(f'{values["ax"]} {values["ay"]}\n')
+                    f.write(f'{values["bx"]} {values["by"]}\n')
+                    f.write(f'{values["cx"]} {values["cy"]}\n')
+                    f.write(f'{values["dx"]} {values["dy"]}\n')
+                    f.write(f'{values["px"]} {values["py"]}\n')
+            except FileNotFoundError:
+                sg.popup_error('Nie znaleziono pliku')
             window['zapisz_nazwa_pliku'].update('')
+        
 
 
 if __name__ == "__main__":
