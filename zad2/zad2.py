@@ -181,8 +181,9 @@ def main():
     cy = sg.InputText(size=(10, 1), key='cy')
     dx = sg.InputText(size=(10, 1), key='dx')
     dy = sg.InputText(size=(10, 1), key='dy')
-    px = sg.InputText(size=(10, 1), key='px')
-    py = sg.InputText(size=(10, 1), key='py')
+    # make them uneditable
+    px = sg.InputText(size=(10, 1), key='px', disabled=True)
+    py = sg.InputText(size=(10, 1), key='py', disabled=True)
     A = sg.Frame('A', [[ax, ay]])
     B = sg.Frame('B', [[bx, by]])
     C = sg.Frame('C', [[cx, cy]])
