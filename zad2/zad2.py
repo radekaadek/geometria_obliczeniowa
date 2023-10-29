@@ -59,6 +59,9 @@
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 import os
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+fig, ax = plt.subplots()
 
 def tofloat(numbers: list[str]) -> list[float]:
     try:
@@ -67,7 +70,7 @@ def tofloat(numbers: list[str]) -> list[float]:
             raise ValueError
         return retv
     except ValueError:
-        raise ValueError("Podano błędne dane")
+        raise ValueError("Podano błędne dane")\
 
 
 def intersection(A: list[int], B: list[int], C: list[int], D: list[int]) -> list[int]:
@@ -88,27 +91,28 @@ def intersection(A: list[int], B: list[int], C: list[int], D: list[int]) -> list
     else:
         return None
 
-def update_plot(graph_img, a: list[int], b: list[int], c: list[int], d: list[int], p: list[int],
+
+
+def update_plot(canvas, a: list[int], b: list[int], c: list[int], d: list[int], p: list[int],
                 ab_color='red', cd_color='blue', labels=True, ab_linewidth=2, cd_linewidth=2):
-    plt.clf()
-    plt.plot([a[0], b[0]], [a[1], b[1]], ab_color, label='AB', linewidth=ab_linewidth)
-    plt.plot([c[0], d[0]], [c[1], d[1]], cd_color, label='CD', linewidth=cd_linewidth)
+    # clear plot
+    ax.cla()
+    ax.plot([a[0], b[0]], [a[1], b[1]], ab_color, label='AB', linewidth=ab_linewidth)
+    ax.plot([c[0], d[0]], [c[1], d[1]], cd_color, label='CD', linewidth=cd_linewidth)
     if labels:
-        plt.text(a[0], a[1], 'A', color=ab_color, fontsize=12)
-        plt.text(b[0], b[1], 'B', color=ab_color, fontsize=12)
-        plt.text(c[0], c[1], 'C', color=cd_color, fontsize=12)
-        plt.text(d[0], d[1], 'D', color=cd_color, fontsize=12)
+        ax.text(a[0], a[1], 'A', color=ab_color, fontsize=12)
+        ax.text(b[0], b[1], 'B', color=ab_color, fontsize=12)
+        ax.text(c[0], c[1], 'C', color=cd_color, fontsize=12)
+        ax.text(d[0], d[1], 'D', color=cd_color, fontsize=12)
     if p is not None:
-        plt.plot(p[0], p[1], 'go', label='P')
+        ax.plot(p[0], p[1], 'go', label='P')
         if labels:
-            plt.text(p[0], p[1], 'P', color='green', fontsize=12)
-    plt.legend()
-    plt.savefig('graph.png')
-    graph_img.update(filename='graph.png')
-    os.remove('graph.png')
+            ax.text(p[0], p[1], 'P', color='green', fontsize=12)
+    ax.legend()
+    fig.canvas.draw()
 
 
-def btn_update(graph_img: sg.Image, window: sg.Window):
+def btn_update(canvas, window):
     try:
         a_float = tofloat([window['ax'].get(), window['ay'].get()])
         b_float = tofloat([window['bx'].get(), window['by'].get()])
@@ -124,11 +128,11 @@ def btn_update(graph_img: sg.Image, window: sg.Window):
     else:
         window['px'].update(p[0])
         window['py'].update(p[1])
-        update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
+        update_plot(canvas, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
                     labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
 
 # update the plot with data from a file
-def file_update(graph_img: sg.Image, window: sg.Window, ab_color: str, cd_color: str):
+def file_update(canvas, window: sg.Window, ab_color: str, cd_color: str):
     filename = sg.popup_get_file('Wybierz plik', file_types=(('Pliki tekstowe', '*.txt'),))
     if filename is None or filename == '':
         return
@@ -167,7 +171,7 @@ def file_update(graph_img: sg.Image, window: sg.Window, ab_color: str, cd_color:
     else:
         window['px'].update(p[0])
         window['py'].update(p[1])
-        update_plot(graph_img, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
+        update_plot(canvas, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
                     labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
   
 
@@ -204,27 +208,27 @@ def main():
     zapisz_nazwa_pliku = sg.InputText(sg.user_settings_get_entry('-filename-', ''), key='zapisz_nazwa_pliku', size=(30, 1))
     oblicz = sg.Button('Oblicz', key='Oblicz')
 
-    graph_img: sg.Image = None
-
-    # check if graph.png exists
-    if os.path.isfile('graph.png'):
-        os.remove('graph.png')
-    plt.plot(0, 0)
-    plt.savefig('graph.png')
-    graph_img = sg.Image(filename='graph.png', key='graph')
+    
 
     layout = [[sg.Text('Podaj wspolrzedne punktu A'), A, sg.Text('Podaj wspolrzedne punktu B'), B],
                 [sg.Text('Podaj wspolrzedne punktu C'), C, sg.Text('Podaj wspolrzedne punktu D'), D],
                 [sg.Text('Wspolrzedne punktu P'), P],
-                [graph_img],
+                [sg.Graph(canvas_size=(800, 800), graph_bottom_left=(0, 0), graph_top_right=(100, 100), key='graph')],
                 [sg.Text('Kolor odcinka AB'), ab_color_combo, ab_line_width, sg.Text('Kolor odcinka CD'), cd_color_combo, cd_line_width, oznaczenia],
                 [wczytaj],
                 [sg.Text('Nazwa pliku do zapisu:'), zapisz_nazwa_pliku, zapisz, zapisz_button],
                 [oblicz]]
     
+    
+    
     window = sg.Window('Zadanie 2', layout)
     # set window theme
     window.finalize()
+
+    canvas = FigureCanvasTkAgg(fig, master=window['graph'].Widget)
+    plot_widget = canvas.get_tk_widget()
+    plot_widget.grid(row=0, column=0)
+
 
     while True:
         event, values = window.read()
@@ -233,9 +237,9 @@ def main():
                 os.remove('graph.png')
             break
         if event == 'Oblicz':
-            btn_update(graph_img, window)
+            btn_update(canvas, window)
         elif event == 'wczytaj':
-            file_update(graph_img, window, values['ab_color'], values['cd_color'])
+            file_update(canvas, window, values['ab_color'], values['cd_color'])
         elif event == 'wczytaj':
             print(values['wczytaj'])
         elif event == 'zapisz_button':
