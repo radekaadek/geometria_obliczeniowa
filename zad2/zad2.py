@@ -62,6 +62,8 @@ import os
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 fig, ax = plt.subplots()
+ax.set_xlabel('x')
+ax.set_ylabel('y')
 
 def tofloat(numbers: list[str]) -> list[float]:
     try:
@@ -70,7 +72,7 @@ def tofloat(numbers: list[str]) -> list[float]:
             raise ValueError
         return retv
     except ValueError:
-        raise ValueError("Podano błędne dane")\
+        raise ValueError("Podano błędne dane")
 
 
 def intersection(A: list[int], B: list[int], C: list[int], D: list[int]) -> list[int]:
@@ -92,21 +94,33 @@ def intersection(A: list[int], B: list[int], C: list[int], D: list[int]) -> list
         return None
 
 
-
-def update_plot(canvas, a: list[int], b: list[int], c: list[int], d: list[int], p: list[int],
-                ab_color='red', cd_color='blue', labels=True, ab_linewidth=2, cd_linewidth=2):
+def update_plot(canvas, a: list[int] | None, b: list[int] | None, c: list[int] | None, d: list[int] | None,
+                p: list[int] | None, ab_color='red', cd_color='blue', labels=True, ab_linewidth=2, cd_linewidth=2):
     # clear plot
     ax.cla()
-    ax.plot([a[0], b[0]], [a[1], b[1]], ab_color, label='AB', linewidth=ab_linewidth)
-    ax.plot([c[0], d[0]], [c[1], d[1]], cd_color, label='CD', linewidth=cd_linewidth)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    if a is not None and b is not None:
+        ax.plot([a[0], b[0]], [a[1], b[1]], ab_color, label='AB', linewidth=ab_linewidth)
+    if c is not None and d is not None:
+        ax.plot([c[0], d[0]], [c[1], d[1]], cd_color, label='CD', linewidth=cd_linewidth)
     if labels:
-        ax.text(a[0], a[1], 'A', color=ab_color, fontsize=12)
-        ax.text(b[0], b[1], 'B', color=ab_color, fontsize=12)
-        ax.text(c[0], c[1], 'C', color=cd_color, fontsize=12)
-        ax.text(d[0], d[1], 'D', color=cd_color, fontsize=12)
+        if a is not None:
+            ax.scatter(a[0], a[1], color=ab_color)
+            ax.text(a[0], a[1], 'A', color=ab_color, fontsize=12)
+        if b is not None:
+            ax.scatter(b[0], b[1], color=ab_color)
+            ax.text(b[0], b[1], 'B', color=ab_color, fontsize=12)
+        if c is not None:
+            ax.scatter(c[0], c[1], color=cd_color)
+            ax.text(c[0], c[1], 'C', color=cd_color, fontsize=12)
+        if d is not None:
+            ax.scatter(d[0], d[1], color=cd_color)
+            ax.text(d[0], d[1], 'D', color=cd_color, fontsize=12)
     if p is not None:
         ax.plot(p[0], p[1], 'go', label='P')
         if labels:
+            ax.scatter(p[0], p[1], color='green')
             ax.text(p[0], p[1], 'P', color='green', fontsize=12)
     ax.legend()
     fig.canvas.draw()
@@ -130,6 +144,18 @@ def btn_update(canvas, window):
         window['py'].update(p[1])
         update_plot(canvas, a_float, b_float, c_float, d_float, p, window['ab_color'].get(), window['cd_color'].get(),
                     labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
+
+def line_style_update(canvas, window):
+    try:
+        a_float = tofloat([window['ax'].get(), window['ay'].get()])
+        b_float = tofloat([window['bx'].get(), window['by'].get()])
+        c_float = tofloat([window['cx'].get(), window['cy'].get()])
+        d_float = tofloat([window['dx'].get(), window['dy'].get()])
+        p_float = tofloat([window['px'].get(), window['py'].get()])
+    except ValueError:
+        return
+    update_plot(canvas, a_float, b_float, c_float, d_float, p_float, window['ab_color'].get(), window['cd_color'].get(),
+                labels=window['oznaczenia'].get(), ab_linewidth=window['ab_line_width'].get(), cd_linewidth=window['cd_line_width'].get())
 
 # update the plot with data from a file
 def file_update(canvas, window: sg.Window, ab_color: str, cd_color: str):
@@ -220,18 +246,20 @@ def main():
                 [oblicz]]
     
     
-    
     window = sg.Window('Zadanie 2', layout)
-    # set window theme
     window.finalize()
 
     canvas = FigureCanvasTkAgg(fig, master=window['graph'].Widget)
     plot_widget = canvas.get_tk_widget()
     plot_widget.grid(row=0, column=0)
-
+    ab_old_val = window['ab_color'].get()
+    cd_old_val = window['cd_color'].get()
+    oznaczenia_old_val = window['oznaczenia'].get()
+    szerokosc_ab = window['ab_line_width'].get()
+    szerokosc_cd = window['cd_line_width'].get()
 
     while True:
-        event, values = window.read()
+        event, values = window.read(10)
         if event == sg.WIN_CLOSED:
             if os.path.isfile('graph.png'):
                 os.remove('graph.png')
@@ -240,8 +268,6 @@ def main():
             btn_update(canvas, window)
         elif event == 'wczytaj':
             file_update(canvas, window, values['ab_color'], values['cd_color'])
-        elif event == 'wczytaj':
-            print(values['wczytaj'])
         elif event == 'zapisz_button':
             try:
                 with open(values['zapisz_nazwa_pliku'], 'w') as f:
@@ -253,8 +279,12 @@ def main():
             except FileNotFoundError:
                 sg.popup_error('Nie znaleziono pliku')
             window['zapisz_nazwa_pliku'].update('')
-        
-
+        # on combo color change
+        if ab_old_val != window['ab_color'].get() or cd_old_val != window['cd_color'].get() or oznaczenia_old_val != window['oznaczenia'].get() or szerokosc_ab != window['ab_line_width'].get() or szerokosc_cd != window['cd_line_width'].get():
+            ab_old_val = window['ab_color'].get()
+            cd_old_val = window['cd_color'].get()
+            oznaczenia_old_val = window['oznaczenia'].get()
+            line_style_update(canvas, window)
 
 if __name__ == "__main__":
     main()
