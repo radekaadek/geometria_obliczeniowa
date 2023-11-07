@@ -229,6 +229,33 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
     # zwrócenie wielokąta
     return wielokat
 
+def ile_puktow_wewnatrz(wielokat: list[tuple], plik) -> int:
+    """Zlicza ile punktów z pliku jest wewnątrz wielokąta.
+
+    Args:
+        wielokat (list[tuple]): Wielokąt w postaci listy krotek.
+        plik ([type]): Plik z punktami.
+
+    Returns:
+        int: Liczba punktów wewnątrz wielokąta.
+    """
+    # inicjalizacja licznika punktów wewnątrz wielokąta
+    liczba_punktow = 0
+    
+    for line in plik:
+        # podział linii na współrzędne
+        x, y = line.split()
+        # sprawdzenie czy punkt jest wewnątrz wielokąta
+        try:
+            if wewnatrz(wielokat, (float(x), float(y))):
+                liczba_punktow += 1
+        except ValueError:
+            sg.popup_error('Plik zawiera niepoprawne dane!')
+            return 0
+    
+    # zwrócenie liczby punktów wewnątrz wielokąta
+    return liczba_punktow
+
 
 punkt = sg.Frame('Punkt', [
     [sg.Text('x:'), sg.Input(key='x')],
@@ -252,9 +279,11 @@ punkt_outside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta',
 layout = [
     [sg.Graph(canvas_size=(800, 800), graph_bottom_left=(0, 0), graph_top_right=(100, 100), key='graph')],
     [sg.Input(key='wielokat'), sg.FileBrowse('Wybierz plik z wielokatem'), sg.Button('Wczytaj wielokat', key='W')],
+    [sg.Input(key='punkty'), sg.FileBrowse('Wybierz plik z punktami')],
+    [sg.Button('Oblicz ile punktow wewnatrz wielokata', key='P'), sg.Text('Liczba punktow:'), sg.Text('0', key='punkty_wewnatrz')],
     [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo, sg.Text('Kolor linii:'), line_color_combo],
     # punkt input
-    [sg.Text('Podaj wspolzedne punktu:'), punkt, sg.Button('Dodaj punkt')],
+    [sg.Text('Podaj wspolzedne punktu:'), punkt, sg.Button('Dodaj punkt do wykresu')],
     [sg.Text('Kolor punktu wewnatrz:'), punkt_inside_color_combo, sg.Text('Kolor punktu na zewnatrz:'), punkt_outside_color_combo],
     [sg.Button('Odswiez')]
 ]
@@ -333,20 +362,27 @@ while True:
         except ValueError:
             sg.popup_error('Podano niepoprawne wspolrzedne punktu!')
             continue
-        
-        # check if the polygon is loaded
-        if not wielokat:
+        punkty.add((x, y))
+        redraw()
+    
+    elif event == 'P':
+        # check if a polygon has been loaded
+        if wielokat == []:
             sg.popup_error('Nie wczytano wielokata!')
             continue
-
-        # check if the point is inside the polygon
-        if (x, y) not in punkty:
-            punkty.add((x, y))
-            if wewnatrz(wielokat, (x, y)):
-                ax.scatter(x, y, color=punkt_inside_color)
-            else:
-                ax.scatter(x, y, color=punkt_outside_color)
-        fig.canvas.draw()
+        # check if a file with points has been loaded
+        if values['punkty'] == '':
+            sg.popup_error('Nie wybrano pliku z punktami!')
+            continue
+        # check if the file with points exists
+        try:
+            with open(values['punkty'], 'r') as f:
+                punkty_wewnatrz = ile_puktow_wewnatrz(wielokat, f)
+                window['punkty_wewnatrz'].update(punkty_wewnatrz)
+        except FileNotFoundError:
+            sg.popup_error('Nie znaleziono pliku!')
+            continue
+                
     
     if event in ['line_width', 'line_style', 'line_color', 'punkt_inside_color', 'punkt_outside_color', 'Odswiez']:
         redraw()
