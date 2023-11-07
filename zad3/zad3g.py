@@ -167,6 +167,7 @@
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 import os
+import itertools
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def wewnatrz(wielokat: list[tuple], punkt: tuple) -> bool:
@@ -209,33 +210,56 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
     wielokat = []
     
     # otwarcie pliku
-    with open(sciezka, 'r') as plik:
-        # iteracja po liniach pliku
-        for linia in plik:
-            # podział linii na współrzędne
-            x, y = linia.split()
-            
-            # dodanie wierzchołka do listy
-            wielokat.append((float(x), float(y)))
+    try:
+        with open(sciezka, 'r') as f:
+            # iteracja po liniach pliku
+            for line in f:
+                # podział linii na współrzędne
+                x, y = line.split()
+                # dodanie wierzchołka do wielokąta
+                try:
+                    wielokat.append((float(x), float(y)))
+                except ValueError:
+                    sg.popup_error('Plik zawiera niepoprawne dane!')
+                    return []
+    except FileNotFoundError:
+        sg.popup_error('Nie znaleziono pliku!')
+        return []
     
     # zwrócenie wielokąta
     return wielokat
+
 
 punkt = sg.Frame('Punkt', [
     [sg.Text('x:'), sg.Input(key='x')],
     [sg.Text('y:'), sg.Input(key='y')]
 ])
 
+default_width = 2
+default_style = '-'
+default_color = 'magenta'
+
+default_inside_color = 'green'
+default_outside_color = 'red'
+
+line_width_combo = sg.Combo(list(range(1, 11)), default_value=default_width, key='line_width')
+line_style_combo = sg.Combo(['-', '--', '-.', ':'], default_value=default_style, key='line_style')
+line_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_color, key='line_color')
+
+punkt_inside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_inside_color, key='punkt_inside_color')
+punkt_outside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_outside_color, key='punkt_outside_color')
+
 layout = [
     [sg.Graph(canvas_size=(800, 800), graph_bottom_left=(0, 0), graph_top_right=(100, 100), key='graph')],
     [sg.Input(key='wielokat'), sg.FileBrowse('Wybierz plik z wielokatem'), sg.Button('Wczytaj wielokat', key='W')],
+    [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo, sg.Text('Kolor linii:'), line_color_combo],
     # punkt input
-    [sg.Text('Podaj wspolzedne punktu:'), punkt],
-    # przyciski
-    [sg.Button('Dodaj punkt')]
+    [sg.Text('Podaj wspolzedne punktu:'), punkt, sg.Button('Dodaj punkt')],
+    [sg.Text('Kolor punktu wewnatrz:'), punkt_inside_color_combo, sg.Text('Kolor punktu na zewnatrz:'), punkt_outside_color_combo],
+    [sg.Button('Odswiez')]
 ]
 
-window = sg.Window('Zadanie 3', layout).finalize()
+window = sg.Window('Zadanie 3', layout, finalize=True)
 
 fig, ax = plt.subplots()
 
@@ -246,13 +270,45 @@ ax.set_xlabel('x')
 ax.set_ylabel('y')
 fig.canvas.draw()
 
-file_path = ''
-wielokat = []
+def redraw() -> None:
+    ax.clear()
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    if wielokat:
+        ax.plot(*zip(*itertools.chain(wielokat, [wielokat[0]])),
+                color=wielokat_color, linewidth=wielokat_line_width, linestyle=wielokat_line_style)
+    for p in punkty:
+        if wewnatrz(wielokat, p):
+            ax.scatter(*p, color=punkt_inside_color)
+        else:
+            ax.scatter(*p, color=punkt_outside_color)
+    fig.canvas.draw()
+
+file_path: str = ''
+wielokat: list[tuple] = []
+wielokat_color = default_color
+wielokat_line_width = default_width
+wielokat_line_style = default_style
 punkty: set[tuple] = set()
+punkt_inside_color = default_inside_color
+punkt_outside_color = default_outside_color
+
 
 while True:
     event, values = window.read()
     
+    # combo events
+    if values['line_width'] != wielokat_line_width:
+        wielokat_line_width = values['line_width']
+    if values['line_style'] != wielokat_line_style:
+        wielokat_line_style = values['line_style']
+    if values['line_color'] != wielokat_color:
+        wielokat_color = values['line_color']
+    if values['punkt_inside_color'] != punkt_inside_color:
+        punkt_inside_color = values['punkt_inside_color']
+    if values['punkt_outside_color'] != punkt_outside_color:
+        punkt_outside_color = values['punkt_outside_color']
+
     if event == sg.WIN_CLOSED:
         break
     
@@ -266,11 +322,8 @@ while True:
             fig.canvas.draw()
             continue
         wielokat = wczytaj_wielokat(file_path)
-        ax.clear()
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.plot([wielokat[i][0] for i in range(len(wielokat))], [wielokat[i][1] for i in range(len(wielokat))])
-        fig.canvas.draw()
+        punkty = set()
+        redraw()
     
     elif event == 'Dodaj punkt':
         # chekc if the point is correct
@@ -287,10 +340,13 @@ while True:
             continue
 
         # check if the point is inside the polygon
-        if wewnatrz(wielokat, (x, y)) and (x, y) not in punkty:
-            ax.scatter(x, y, color='green')
-        else:
-            ax.scatter(x, y, color='red')
-        punkty.add((x, y))
+        if (x, y) not in punkty:
+            punkty.add((x, y))
+            if wewnatrz(wielokat, (x, y)):
+                ax.scatter(x, y, color=punkt_inside_color)
+            else:
+                ax.scatter(x, y, color=punkt_outside_color)
         fig.canvas.draw()
-
+    
+    if event in ['line_width', 'line_style', 'line_color', 'punkt_inside_color', 'punkt_outside_color', 'Odswiez']:
+        redraw()
