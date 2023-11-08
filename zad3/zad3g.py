@@ -116,7 +116,7 @@ layout = [
     [sg.Button('Oblicz ile punktow wewnatrz wielokata', key='P'), sg.Text('Liczba punktow:'), sg.Text('0', key='punkty_wewnatrz')],
     [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo, sg.Text('Kolor linii:'), line_color_combo],
     # punkt input
-    [sg.Text('Podaj wspolzedne punktu:'), punkt, sg.Button('Dodaj punkt do wykresu')],
+    [sg.Text('Podaj wspolzedne punktu:'), punkt, sg.Button('Dodaj punkt do wykresu', key='Dodaj punkt')],
     [sg.Text('Kolor punktu wewnatrz:'), punkt_inside_color_combo, sg.Text('Kolor punktu na zewnatrz:'), punkt_outside_color_combo],
     [sg.Button('Odswiez')]
 ]
