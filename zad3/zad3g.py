@@ -229,6 +229,10 @@ while True:
             sg.popup_error('Podano niepoprawne wspolrzedne punktu!')
             continue
         punkt = (x, y)
+        if wewnatrz(wielokat, punkt):
+            sg.popup_ok('Punkt znajduje sie wewnatrz wielokata!', title='Punkt wewnatrz')
+        else:
+            sg.popup_ok('Punkt znajduje sie na zewnatrz wielokata!', title='Punkt na zewnatrz')
         redraw()
     
     elif event == 'punkty':
