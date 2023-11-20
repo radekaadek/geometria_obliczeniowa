@@ -127,17 +127,17 @@ def punkty_wewnatrz(wielokat: list[tuple], plik) -> list[tuple]:
     return punkty
 
 
-punkt = sg.Frame('Punkt', [
+punkt_frame: sg.Frame = sg.Frame('Punkt', [
     [sg.Text('x:'), sg.Input(key='x')],
     [sg.Text('y:'), sg.Input(key='y')]
 ])
 
-default_width = 2
-default_style = '-'
-default_color = 'magenta'
+default_width: int = 2
+default_style: str = '-'
+default_color: str = 'magenta'
 
-default_inside_color = 'green'
-default_outside_color = 'red'
+default_inside_color: str = 'green'
+default_outside_color: str = 'red'
 
 line_width_combo = sg.Combo(list(range(1, 11)), default_value=default_width, key='line_width', enable_events=True)
 line_style_combo = sg.Combo(['-', '--', '-.', ':'], default_value=default_style, key='line_style', enable_events=True)
@@ -156,7 +156,7 @@ layout = [
     [sg.Text('Liczba punktow wewnatrz:'), sg.Text('0', key='punkty_wewnatrz')],
     [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo, sg.Text('Kolor linii:'), line_color_combo],
     # punkt input
-    [sg.Text('Podaj wspolzedne punktu:'), punkt, sg.Button('Dodaj punkt do wykresu', key='Dodaj punkt')],
+    [sg.Text('Podaj wspolzedne punktu:'), punkt_frame, sg.Button('Dodaj punkt do wykresu', key='Dodaj punkt')],
     [sg.Text('Kolor punktu wewnatrz:'), punkt_inside_color_combo, sg.Text('Kolor punktu na zewnatrz:'), punkt_outside_color_combo],
     [sg.Button('Odswiez')]
 ]
@@ -190,7 +190,7 @@ def redraw() -> None:
     ax.set_aspect('equal', adjustable='box')
     if wielokat:
         ax.plot(*zip(*itertools.chain(wielokat, [wielokat[0]])),
-                color=wielokat_color, linewidth=wielokat_line_width, linestyle=wielokat_line_style)
+                color=wielokat_color, linewidth=wielokat_line_width, linestyle=wielokat_line_style, )
     if punkty:
         for p in punkty:
             if wewnatrz(wielokat, p):
@@ -213,19 +213,14 @@ while True:
     # combo events
     elif event == 'line_width':
         wielokat_line_width = values['line_width']
-        redraw()
     elif event == 'line_style':
         wielokat_line_style = values['line_style']
-        redraw()
     elif event == 'line_color':
         wielokat_color = values['line_color']
-        redraw()
     elif event == 'punkt_inside_color':
         punkt_inside_color = values['punkt_inside_color']
-        redraw()
     elif event == 'punkt_outside_color':
         punkt_outside_color = values['punkt_outside_color']
-        redraw()
     
     elif event == 'Dodaj punkt':
         # check if the point is correct
@@ -245,7 +240,6 @@ while True:
         # set liczba punktow wewnatrz to 0
         window['punkty_wewnatrz'].update(0)
         punkty = set()
-        redraw()
     
     elif event == 'punkty':
         # check if a polygon has been loaded
@@ -266,7 +260,6 @@ while True:
             continue
         finally:
             punkty = set(punkty_w)
-            redraw()
 
     elif event == 'wielokat':
         file_path = values['wielokat']
@@ -281,8 +274,4 @@ while True:
         punkt = None
         punkty = set()
 
-        redraw()
-                
-    
-    if event in ['line_width', 'line_style', 'line_color', 'punkt_inside_color', 'punkt_outside_color', 'Odswiez']:
-        redraw()
+    redraw()
