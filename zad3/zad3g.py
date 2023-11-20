@@ -113,7 +113,10 @@ def punkty_wewnatrz(wielokat: list[tuple], plik) -> list[tuple]:
     
     for line in plik:
         # podział linii na współrzędne
-        y, x = line.split()
+        try:
+            y, x = line.split()
+        except ValueError:
+            sg.popup_error('Plik zawiera niepoprawne dane!')
         try:
             xf = float(x)
             yf = float(y)
@@ -204,7 +207,6 @@ def redraw() -> None:
     ax.set_aspect('equal', adjustable='box')
     if wielokat:
         col = color_trans[wielokat_color]
-        print(col)
         ax.plot(*zip(*itertools.chain(wielokat, [wielokat[0]])),
                 color=col, linewidth=wielokat_line_width, linestyle=wielokat_line_style, )
     if punkty:
@@ -228,6 +230,15 @@ def set_color(widget_name) -> None:
     style_name  = combo.widget["style"]
     combo_style = combo.ttk_style
     combo_style.configure(style_name, foreground=color_trans[col], fieldbackground=color_trans[col])
+
+window.write_event_value('a', 'a')
+event, values = window.read()
+
+set_color('line_color')
+set_color('punkt_inside_color')
+set_color('punkt_outside_color')
+
+window.write_event_value('a', 'a')
 
 while True:
     event, values = window.read()
