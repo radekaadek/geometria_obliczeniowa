@@ -141,36 +141,36 @@ default_outside_color: str = 'red'
 
 line_width_combo = sg.Combo(list(range(1, 11)), default_value=default_width, key='line_width', enable_events=True)
 line_style_combo = sg.Combo(['-', '--', '-.', ':'], default_value=default_style, key='line_style', enable_events=True)
-line_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_color, key='line_color', enable_events=True)
+line_color_combo = sg.ColorChooserButton('Wybierz kolor linii', key='line_color')
 
-punkt_inside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_inside_color, key='punkt_inside_color', enable_events=True)
-punkt_outside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_outside_color, key='punkt_outside_color', enable_events=True)
+in_col_comb = sg.ColorChooserButton('Wybierz kolor punktu wewnatrz', key='punkt_inside_color')
+out_col_comb = sg.ColorChooserButton('Wybierz kolor punktu na zewnatrz', key='punkt_outside_color')
 # przycisk - file dialog
 wybierz_wielokat = sg.FileBrowse('Wybierz wielokat', enable_events=True, key='wielokat')
 wybierz_punkty = sg.FileBrowse('Wybierz plik z punktami', enable_events=True, key='punkty')
 
 layout = [
     [sg.Graph(canvas_size=(800, 800), graph_bottom_left=(0, 0), graph_top_right=(100, 100), key='graph')],
-    [wybierz_wielokat],
-    [wybierz_punkty],
+    [sg.In("", visible=False, enable_events=True, key='wielokat'), wybierz_wielokat,
+     sg.In("", visible=False, enable_events=True, key='punkty'), wybierz_punkty],
     [sg.Text('Liczba punktow wewnatrz:'), sg.Text('0', key='punkty_wewnatrz')],
-    [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo, sg.Text('Kolor linii:'), line_color_combo],
+    [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo,
+     sg.In("", visible=False, enable_events=True, key='line_color'), line_color_combo],
     # punkt input
-    [sg.Text('Podaj wspolzedne punktu:'), punkt_frame, sg.Button('Dodaj punkt do wykresu', key='Dodaj punkt')],
-    [sg.Text('Kolor punktu wewnatrz:'), punkt_inside_color_combo, sg.Text('Kolor punktu na zewnatrz:'), punkt_outside_color_combo],
+    [sg.Text('Podaj wspolzedne punktu:'), punkt_frame, sg.Button('Dodaj punkt', key='Dodaj punkt')],
+    [sg.In("", visible=False, enable_events=True, key='punkt_inside_color'), in_col_comb,
+     sg.In("", visible=False, enable_events=True, key='punkt_outside_color'), out_col_comb],
     [sg.Button('Odswiez')]
 ]
 
-window = sg.Window('Zadanie 3', layout, finalize=True)
+# show window in the middle of the screen
+window = sg.Window('Zadanie 3', layout, finalize=True, location=(0, 0))
 
 fig, ax = plt.subplots()
 
 canvas = FigureCanvasTkAgg(fig, master=window['graph'].TKCanvas)
 plot_widget = canvas.get_tk_widget()
 plot_widget.grid(row=0, column=0)
-ax.set_xlabel('x')
-ax.set_ylabel('y')
-fig.canvas.draw()
 
 
 file_path: str = ''
@@ -189,8 +189,9 @@ def redraw() -> None:
     ax.set_ylabel('y')
     ax.set_aspect('equal', adjustable='box')
     if wielokat:
-        ax.plot(*zip(*itertools.chain(wielokat, [wielokat[0]])),
-                color=wielokat_color, linewidth=wielokat_line_width, linestyle=wielokat_line_style, )
+        if wielokat[-1] != wielokat[0]:
+            wielokat.append(wielokat[0])
+        ax.plot(*zip(*wielokat), color=wielokat_color, linewidth=wielokat_line_width, linestyle=wielokat_line_style)
     if punkty:
         for p in punkty:
             if wewnatrz(wielokat, p):
@@ -203,6 +204,8 @@ def redraw() -> None:
         else:
             ax.scatter(*punkt, color=punkt_outside_color)
     fig.canvas.draw()
+
+redraw()
 
 while True:
     event, values = window.read()
