@@ -1,4 +1,3 @@
-import tkinter
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 import itertools
@@ -92,6 +91,9 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
     except FileNotFoundError:
         sg.popup_error('Nie znaleziono pliku!')
         return []
+    except UnicodeDecodeError:
+        sg.popup_error('Plik nie jest tekstem!')
+        return []
     
     # zwrócenie wielokąta
     return wielokat
@@ -137,12 +139,12 @@ default_color = 'magenta'
 default_inside_color = 'green'
 default_outside_color = 'red'
 
-line_width_combo = sg.Combo(list(range(1, 11)), default_value=default_width, key='line_width')
-line_style_combo = sg.Combo(['-', '--', '-.', ':'], default_value=default_style, key='line_style')
-line_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_color, key='line_color')
+line_width_combo = sg.Combo(list(range(1, 11)), default_value=default_width, key='line_width', enable_events=True)
+line_style_combo = sg.Combo(['-', '--', '-.', ':'], default_value=default_style, key='line_style', enable_events=True)
+line_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_color, key='line_color', enable_events=True)
 
-punkt_inside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_inside_color, key='punkt_inside_color')
-punkt_outside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_outside_color, key='punkt_outside_color')
+punkt_inside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_inside_color, key='punkt_inside_color', enable_events=True)
+punkt_outside_color_combo = sg.Combo(['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black'], default_value=default_outside_color, key='punkt_outside_color', enable_events=True)
 # przycisk - file dialog
 wybierz_wielokat = sg.FileBrowse('Wybierz wielokat', enable_events=True, key='wielokat')
 wybierz_punkty = sg.FileBrowse('Wybierz plik z punktami', enable_events=True, key='punkty')
@@ -170,10 +172,22 @@ ax.set_xlabel('x')
 ax.set_ylabel('y')
 fig.canvas.draw()
 
-def redraw(punkty: list[tuple] = None) -> None:
+
+file_path: str = ''
+wielokat: list[tuple] = []
+wielokat_color = default_color
+wielokat_line_width = default_width
+wielokat_line_style = default_style
+punkty: set[tuple] = set()
+punkt: tuple = ()
+punkt_inside_color = default_inside_color
+punkt_outside_color = default_outside_color
+
+def redraw() -> None:
     ax.clear()
     ax.set_xlabel('x')
     ax.set_ylabel('y')
+    ax.set_aspect('equal', adjustable='box')
     if wielokat:
         ax.plot(*zip(*itertools.chain(wielokat, [wielokat[0]])),
                 color=wielokat_color, linewidth=wielokat_line_width, linestyle=wielokat_line_style)
@@ -190,18 +204,6 @@ def redraw(punkty: list[tuple] = None) -> None:
             ax.scatter(*punkt, color=punkt_outside_color)
     fig.canvas.draw()
 
-file_path: str = ''
-wielokat: list[tuple] = []
-wielokat_color = default_color
-wielokat_line_width = default_width
-wielokat_line_style = default_style
-# punkty: set[tuple] = set()
-punkt: tuple
-punkt_inside_color = default_inside_color
-punkt_outside_color = default_outside_color
-wielokat_prev = ''
-
-
 while True:
     event, values = window.read()
     
@@ -209,19 +211,24 @@ while True:
         break
     
     # combo events
-    if values['line_width'] != wielokat_line_width:
+    elif event == 'line_width':
         wielokat_line_width = values['line_width']
-    if values['line_style'] != wielokat_line_style:
+        redraw()
+    elif event == 'line_style':
         wielokat_line_style = values['line_style']
-    if values['line_color'] != wielokat_color:
+        redraw()
+    elif event == 'line_color':
         wielokat_color = values['line_color']
-    if values['punkt_inside_color'] != punkt_inside_color:
+        redraw()
+    elif event == 'punkt_inside_color':
         punkt_inside_color = values['punkt_inside_color']
-    if values['punkt_outside_color'] != punkt_outside_color:
+        redraw()
+    elif event == 'punkt_outside_color':
         punkt_outside_color = values['punkt_outside_color']
+        redraw()
     
-    if event == 'Dodaj punkt':
-        # chekc if the point is correct
+    elif event == 'Dodaj punkt':
+        # check if the point is correct
         try:
             x = float(values['x'])
             y = float(values['y'])
@@ -229,10 +236,15 @@ while True:
             sg.popup_error('Podano niepoprawne wspolrzedne punktu!')
             continue
         punkt = (x, y)
+        if not wielokat:
+            sg.popup_error('Nie wprowadzono wielokata!')
         if wewnatrz(wielokat, punkt):
             sg.popup_ok('Punkt znajduje sie wewnatrz wielokata!', title='Punkt wewnatrz')
         else:
             sg.popup_ok('Punkt znajduje sie na zewnatrz wielokata!', title='Punkt na zewnatrz')
+        # set liczba punktow wewnatrz to 0
+        window['punkty_wewnatrz'].update(0)
+        punkty = set()
         redraw()
     
     elif event == 'punkty':
@@ -249,13 +261,14 @@ while True:
             with open(values['punkty'], 'r') as f:
                 punkty_w = punkty_wewnatrz(wielokat, f)
                 window['punkty_wewnatrz'].update(len(punkty_w))
-            redraw(punkty_w)
         except FileNotFoundError:
             sg.popup_error('Nie znaleziono pliku!')
             continue
+        finally:
+            punkty = set(punkty_w)
+            redraw()
 
     elif event == 'wielokat':
-        wielokat_prev = values['wielokat']
         file_path = values['wielokat']
         if file_path == '':
             wielokat = []
@@ -266,6 +279,8 @@ while True:
             continue
         wielokat = wczytaj_wielokat(file_path)
         punkt = None
+        punkty = set()
+
         redraw()
                 
     
