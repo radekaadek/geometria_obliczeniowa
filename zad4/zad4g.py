@@ -1,86 +1,7 @@
-import time
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-
-#  WYZNACZENIE OTOCZKI WYPUKŁEJ ZBIORU PUNKTÓW
-# Określenie otoczki wypukłej zbioru punktów jest jednym z podstawowych zadań geometrii
-# obliczeniowej. Zadanie polega na znalezieniu najmniejszego wielokąta P ograniczającego zbiór
-# punktów Q takiego, że każdy z punktów leży na brzegu P, albo w jego wnętrzu. Wypukłą otoczkę
-# zbioru oznaczamy przez CH(Q) (skrót od angielskiego convex hull). Odwołując się do intuicji, zbiór
-# punktów możemy wyobrazić sobie jako gwoździe wystające z deski. Na gwoździe zakładamy gumkę,
-# która przybierze kształt wypukłej otoczki. Jest wiele algorytmów wyznaczania otoczki wypukłej.
-# Poniżej przedstawiono dwa tj.: algorytm Grahama (1972) oraz Jarvisa (1973). Cechą wspólną
-# algorytmów jest zastosowanie metoda zwanej „zamiataniem obrotowym”, polegającym na
-# przetwarzaniu wierzchołków w kolejności występowania kątów, jakie tworzą z ustalonym punktem
-# i przechodzącym przez niego osią.
-# Rysunek 15. Obraz otoczki wypukłej P zbioru punktów Q
-# 5.1 ALGORYTM GRAHAMA
-# W algorytmie Grahama otoczka jest wyznaczana z wykorzystaniem stosu S, który zawiera
-# kandydatów na wierzchołki otoczki. Każdy punkt będący kandydatem do punktu otoczki jest raz
-# wkładany na stos, a jeśli w dalszej analizie okazuje się, że nie spełnia odpowiednich warunków jest
-# z niego zdejmowany. Po zakończeniu działania algorytmu stos zawiera wyłącznie wierzchołki
-# CH(Q). Kolejność czynności wykonywane w ramach algorytmu Grahama jest następująca:
-# 1. ze zbioru Q (zawierającego n punktów) wyznaczamy punkt Po o minimalnym Y, jeśli takich punktów jest
-# więcej przyjmujemy punkt o największym X,
-# 2. sortujemy punkty ze względu na azymuty promieni łączących punkt Po z kolejnymi punktami zbioru Q,
-# jeśli więcej niż jeden promień posiada identyczną wartość azymutu usuwamy wszystkie punkty oprócz
-# położonego najdalej od Po (najdłuższym promieniu),
-# 3. w rezultacie tej operacji pozostaje do rozważania m punktów (kandydatów), z tego ograniczonego zbioru
-# punktów do otoczki na pewno należy punkt ostatni czyli Pm,
-# 4. zerujemy stos S zapamiętujący punkty otoczki i wprowadzamy na stos punktu Po oraz P1 i P2,
-# 5. od j w zakresie od 3 do m przeglądamy kolejne punkty w nawiązaniu do ostatnich dwóch punktów stosu
-# S sprawdzając kierunek skrętu (wykorzystujemy własność iloczynu wektorowego), do chwili kiedy skręt
-# w ostatnim wierzchołku na stosie do punktu Pj nie jest skrętem w prawo wtedy eliminujemy taki
-# wierzchołek ze stosu dopiero przy skręcie w prawo dodajemy punkt Pj do stosu,
-# 6. po przejrzeniu wszystkich punktów stos zawiera otoczkę wypukłą zbioru Q.
-# Rysunek 16. Ilustracja tworzenia otoczki wypukłej metodą Grahama
-# 16
-# 5.2 ALGORYTM JARVISA
-# W algorytmie Jarvisa wypukła otoczka zbioru punktów Q jest wyznaczana metodą zwaną
-# owijaniem. Ujmując rzecz intuicyjne, algorytm Jarvisa naśladuje ciasne owijanie taśmy wokół
-# punktów zbioru Q. Zaczynamy od zamocowania końca taśmy do położonego najbardziej z lewej
-# strony punktu zbioru Q. Punkt ten oznaczamy jako Po. Punkt ten jest identyczny z punktem Po
-# z algorytmu Grahama. Napinamy taśmę podnosząc ją do góry a następnie przesuwamy w prawo
-# dopóki nie natrafimy na jakiś punkt. Punkt ten także musi należeć do otoczki. Tak więc trzymając
-# cały czas napiętą taśmę wędrujemy naokoło zbioru, dopóki nie trafimy z powrotem do punktu
-# początkowego. Formalnie rzecz biorąc postępowanie polega na tym, że zamiast napinania taśmy
-# jako kolejny punkt otoczki bierzemy taki, który z jej punktem ostatnim daje promień wodzący
-# o najmniejszej wartości azymutu. Postępowanie takie prowadzimy do chwili kiedy nie dotrzemy do
-# wierzchołka położonego najbardziej z prawej strony. Po osiągnięciu tego punktu mamy
-# skonstruowany łańcuch górny otoczki. Łańcuch dolny konstruujemy podobnie lecz zamiast wartości
-# azymutu wykorzystujemy zawsze najmniejszą wartość kata utworzonego z ujemna półosią X.
-# Rysunek 17. Ilustracja tworzenia otoczki wypukłej metodą Jarvisa
-# 17
-# W algorytmie niniejszym można zrezygnować z tworzenia osobnych łańcuchów górnego i dolnego
-# ale wtedy należy operować wartością azymutu w zakresie od 0 do 2 co zmusza nas do jawnego
-# obliczania jego wartości. Przy zastosowaniu podziału na łańcuchy możemy korzystać jedynie z
-# iloczynu wektorowego zamiast z wartości azymutu.
-# 5.3 REALIZACJA ZADANIA
-# Należy przygotować program komputerowy w dowolnym środowisku programowania
-# z zaimplementowanym jednym z algorytmów. Program powinien umożliwiać:
-# 1. wczytanie wykazu punktów z pliku tekstowego,
-# 2. możliwość dodania do wykazu punktów pojedynczego punktu z klawiatury
-# 3. przedstawić graficznie wczytane do wykazu punkty z możliwością:
-# a. wybór znaku prezentacji np. okrąg, kwadrat,
-# b. możliwość opisania numerem punktu,
-# c. zmiany koloru znaku prezentacji,
-# d. zmiany wielkości znaku prezentacji,
-# 4. przedstawić graficznie prostokąt ograniczający wykaz punktów z możliwością
-# a. wyboru kolory linii prostokąta,
-# b. wyboru grubości linii prostokąta,
-# c. wyboru stylu linii prostokąta,
-# 5. na podstawie zbioru punktów zbudować otoczkę wypukłą,
-# 6. przedstawić graficznie otoczką z możliwością
-# a. wyboru kolory linii otoczki
-# b. wyboru grubości linii otoczki
-# c. wyboru stylu linii otoczki
-# 7. zapisanie punktów otoczki do pliku tekstowego
-# Przykładowe dane do obliczeń znajdują się na stronie www.izdebski.edu.pl. Program powinien
-# być oddany na koniec czternastych zajęć, w przypadku nieoddania wystawiana jest ocena
-# negatywna.
 
 fig, ax = plt.subplots()
 
@@ -132,7 +53,7 @@ def graham(Q: list[tuple]) -> list[tuple]:
             S.pop()
         S.append(Q[j])
     # 6. po przejrzeniu wszystkich punktów stos zawiera otoczkę wypukłą zbioru Q.
-    return S
+    return S + [Po]
 
 
         
@@ -177,6 +98,13 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
     # zwrócenie wielokąta
     return wielokat
 
+styl_lini = {
+    # po polsku
+    'kropkowa': ':',
+    'kreskowa': '--',
+    'kreskowo-kropkowa': '-.',
+    'ciagla': '-'
+}
 
 punkt_frame: sg.Frame = sg.Frame('Punkt', [
     [sg.Text('x:'), sg.Input(key='x')],
@@ -184,20 +112,21 @@ punkt_frame: sg.Frame = sg.Frame('Punkt', [
 ])
 
 default_width: int = 2
-default_style: str = '-'
+default_style: str = 'kreskowa'
 default_color: str = 'magenta'
 
-default_inside_color: str = 'green'
-default_outside_color: str = 'red'
+default_border_width: int = 1
+default_border_style: str = 'kropkowa'
+default_border_color: str = 'black'
+
+default_pt_color: str = 'green'
 
 line_width_combo = sg.Combo(list(range(1, 11)), default_value=default_width, key='line_width', enable_events=True)
-line_style_combo = sg.Combo(['-', '--', '-.', ':'], default_value=default_style, key='line_style', enable_events=True)
+line_style_combo = sg.Combo(list(styl_lini.keys()), default_value=default_style, key='line_style', enable_events=True)
 line_color_combo = sg.ColorChooserButton('Wybierz kolor linii', key='line_color')
 
-in_col_comb = sg.ColorChooserButton('Wybierz kolor punktu wewnatrz', key='punkt_inside_color')
-out_col_comb = sg.ColorChooserButton('Wybierz kolor punktu na zewnatrz', key='punkt_outside_color')
+col_comb = sg.ColorChooserButton('Wybierz kolor punktu', key='punkt_inside_color')
 # przycisk - file dialog
-wybierz_wielokat = sg.FileBrowse('Wybierz wielokat', enable_events=True, key='wielokat')
 wybierz_punkty = sg.FileBrowse('Wybierz plik z punktami', enable_events=True, key='punkty')
 
 layout = [
@@ -206,10 +135,12 @@ layout = [
      sg.Button('Narysuj otoczke', key='Narysuj otoczke')],
     [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo,
      sg.In("", visible=False, enable_events=True, key='line_color'), line_color_combo],
-    # punkt input
+    #  to samo dla prostokąta
+    [sg.Text('Grubosc linii prostokata:'), sg.Combo(list(range(1, 11)), default_value=default_border_width, key='border_width', enable_events=True),
+        sg.Text('Styl linii prostokata:'), sg.Combo(list(styl_lini.keys()), default_value=default_border_style, key='border_style', enable_events=True),
+        sg.In("", visible=False, enable_events=True, key='border_color'), sg.ColorChooserButton('Wybierz kolor linii prostokata', key='border_color')],
     [sg.Text('Podaj wspolzedne punktu:'), punkt_frame, sg.Button('Dodaj punkt', key='Dodaj punkt')],
-    [sg.In("", visible=False, enable_events=True, key='punkt_inside_color'), in_col_comb,
-     sg.In("", visible=False, enable_events=True, key='punkt_outside_color'), out_col_comb]
+    [sg.In("", visible=False, enable_events=True, key='punkt_color'), col_comb]
 ]
 
 # show window in the middle of the screen
@@ -225,10 +156,12 @@ wielokat: list[tuple] = []
 wielokat_color = default_color
 wielokat_line_width = default_width
 wielokat_line_style = default_style
-punkty: set[tuple] = set()
+border_color = default_border_color
+border_width = default_border_width
+border_style = default_border_style
+punkty: list[tuple] = []
 punkt: tuple = ()
-punkt_inside_color = default_inside_color
-punkt_outside_color = default_outside_color
+punkt_color = default_pt_color
 
 def redraw() -> None:
     ax.clear()
@@ -236,9 +169,15 @@ def redraw() -> None:
     ax.set_ylabel('y')
     ax.set_aspect('equal', adjustable='box')
     if punkty:
-        ax.scatter(*zip(*punkty), c=punkt_inside_color)
+        ax.scatter(*zip(*punkty), c=punkt_color)
+        # narysuj prostokąt ograniczający
+        min_x = min(punkty, key=lambda x: x[0])[0]
+        max_x = max(punkty, key=lambda x: x[0])[0]
+        min_y = min(punkty, key=lambda x: x[1])[1]
+        max_y = max(punkty, key=lambda x: x[1])[1]
+        ax.plot([min_x, max_x, max_x, min_x, min_x], [min_y, min_y, max_y, max_y, min_y], c=border_color, lw=border_width, ls=styl_lini[border_style])
     if wielokat:
-        ax.plot(*zip(*wielokat), c=wielokat_color, lw=wielokat_line_width, ls=wielokat_line_style)
+        ax.plot(*zip(*wielokat), c=wielokat_color, lw=wielokat_line_width, ls=styl_lini[wielokat_line_style])
     fig.canvas.draw()
 
 redraw()
@@ -249,13 +188,43 @@ while True:
         break
     elif event == 'punkty':
         file_path = values['punkty']
-        punkty = set(wczytaj_wielokat(file_path))
-        redraw()
+        punkty = wczytaj_wielokat(file_path)
+        wielokat = []
     elif event == 'Narysuj otoczke':
         if not punkty:
             sg.popup_error('Nie wczytano punktów!')
             continue
-        wielokat = graham(list(punkty))
-        redraw()
+        wielokat = graham(punkty)
+    # grubosc linii
+    elif event == 'line_width':
+        wielokat_line_width = int(values['line_width'])
+    # styl linii
+    elif event == 'line_style':
+        wielokat_line_style = values['line_style']
+    # kolor linii
+    elif event == 'line_color':
+        wielokat_color = values['line_color']
+    # dodaj punkt
+    elif event == 'Dodaj punkt':
+        try:
+            punkt = (float(values['x']), float(values['y']))
+        except ValueError:
+            sg.popup_error('Podano niepoprawne współrzędne!')
+            continue
+        punkty.append(punkt)
+        if wielokat:
+            wielokat = graham(punkty)
+    # kolor punktu
+    elif event == 'punkt_color':
+        punkt_color = values['punkt_color']
+    # grubosc linii prostokata
+    elif event == 'border_width':
+        border_width = int(values['border_width'])
+    # styl linii prostokata
+    elif event == 'border_style':
+        border_style = values['border_style']
+    # kolor linii prostokata
+    elif event == 'border_color':
+        border_color = values['border_color']
 
     redraw()
