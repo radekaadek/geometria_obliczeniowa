@@ -34,10 +34,15 @@ def wewnatrz(wielokat: list[tuple], punkt: tuple) -> bool:
     """
 
     # sprawdzanie czy znajduje sie wewnatrz prostokata
-    min_x = min([punkt[0] for punkt in wielokat])
-    max_x = max([punkt[0] for punkt in wielokat])
-    min_y = min([punkt[1] for punkt in wielokat])
-    max_y = max([punkt[1] for punkt in wielokat])
+    min_x = wielokat[0][0]
+    max_x = wielokat[0][0]
+    min_y = wielokat[0][1]
+    max_y = wielokat[0][1]
+    for pkt in wielokat:
+        min_x = min(min_x, pkt[0])
+        max_x = max(max_x, pkt[0])
+        min_y = min(min_y, pkt[1])
+        max_y = max(max_y, pkt[1])
     if punkt[0] < min_x or punkt[0] > max_x or punkt[1] < min_y or punkt[1] > max_y:
         return False
 
@@ -84,7 +89,7 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
                 x, y = line.split()
                 # dodanie wierzchołka do wielokąta
                 try:
-                    wielokat.append((float(x), float(y)))
+                    wielokat.append((float(y), float(x)))
                 except ValueError:
                     sg.popup_error('Plik zawiera niepoprawne dane!')
                     return []
