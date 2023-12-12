@@ -92,7 +92,7 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
         sg.popup_error('Nie znaleziono pliku!')
         return []
     except UnicodeDecodeError:
-        sg.popup_error('Plik nie jest tekstem!')
+        sg.popup_error('Nie udalo sie zczytac pliku!')
         return []
     
     # zwrócenie wielokąta
@@ -100,10 +100,10 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
 
 styl_lini = {
     # po polsku
-    'kropkowa': ':',
-    'kreskowa': '--',
-    'kreskowo-kropkowa': '-.',
-    'ciagla': '-'
+    'linia kropkowa': ':',
+    'linia kreskowa': '--',
+    'linia kreskowo-kropkowa': '-.',
+    'linia ciagla': '-'
 }
 
 punkt_frame: sg.Frame = sg.Frame('Punkt', [
@@ -112,12 +112,15 @@ punkt_frame: sg.Frame = sg.Frame('Punkt', [
 ])
 
 default_width: int = 2
-default_style: str = 'kreskowa'
+default_style: str = 'linia kreskowa'
 default_color: str = 'magenta'
 
 default_border_width: int = 1
-default_border_style: str = 'kropkowa'
+default_border_style: str = 'linia kropkowa'
 default_border_color: str = 'black'
+ogranicz = True
+otoczk = True
+numeracja = True
 
 default_pt_color: str = 'green'
 
@@ -131,11 +134,12 @@ wybierz_punkty = sg.FileBrowse('Wybierz plik z punktami', enable_events=True, ke
 
 layout = [
     [sg.Graph(canvas_size=(800, 800), graph_bottom_left=(0, 0), graph_top_right=(100, 100), key='graph')],
-    [sg.In("", visible=False, enable_events=True, key='punkty'), wybierz_punkty,
-     sg.Button('Narysuj otoczke', key='Narysuj otoczke')],
+    [sg.In("", visible=False, enable_events=True, key='punkty'), wybierz_punkty],
+     [sg.Button('Oblicz otoczke', key='Oblicz otoczke'), sg.Text('Otoczka:'), sg.Button('On', size=(3, 1), button_color='white on green', key='-otczk-'), sg.Text('Numeracja punktow:'), sg.Button('On', size=(3, 1), button_color='white on green', key='-numeracja-')],
     [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo,
      sg.In("", visible=False, enable_events=True, key='line_color'), line_color_combo],
     #  to samo dla prostokąta
+    [sg.Text('Prostokat ograniczajacy:'), sg.Button('On', size=(3, 1), button_color='white on green', key='-B-')],
     [sg.Text('Grubosc linii prostokata:'), sg.Combo(list(range(1, 11)), default_value=default_border_width, key='border_width', enable_events=True),
         sg.Text('Styl linii prostokata:'), sg.Combo(list(styl_lini.keys()), default_value=default_border_style, key='border_style', enable_events=True),
         sg.In("", visible=False, enable_events=True, key='border_color'), sg.ColorChooserButton('Wybierz kolor linii prostokata', key='border_color')],
@@ -144,7 +148,7 @@ layout = [
 ]
 
 # show window in the middle of the screen
-window = sg.Window('Zadanie 3', layout, finalize=True, location=(0, 0))
+window = sg.Window('Zadanie 4', layout, finalize=True, location=(0, 0))
 
 canvas = FigureCanvasTkAgg(fig, master=window['graph'].TKCanvas)
 plot_widget = canvas.get_tk_widget()
@@ -170,14 +174,20 @@ def redraw() -> None:
     ax.set_aspect('equal', adjustable='box')
     if punkty:
         ax.scatter(*zip(*punkty), c=punkt_color)
+        # add a number to the right bottom corner of each point
+        if numeracja:
+            for i, p in enumerate(punkty):
+                ax.text(p[0], p[1], i+1, ha='left', va='bottom', fontsize=10)
         # narysuj prostokąt ograniczający
-        min_x = min(punkty, key=lambda x: x[0])[0]
-        max_x = max(punkty, key=lambda x: x[0])[0]
-        min_y = min(punkty, key=lambda x: x[1])[1]
-        max_y = max(punkty, key=lambda x: x[1])[1]
-        ax.plot([min_x, max_x, max_x, min_x, min_x], [min_y, min_y, max_y, max_y, min_y], c=border_color, lw=border_width, ls=styl_lini[border_style])
+        if ogranicz:
+            min_x = min(punkty, key=lambda x: x[0])[0]
+            max_x = max(punkty, key=lambda x: x[0])[0]
+            min_y = min(punkty, key=lambda x: x[1])[1]
+            max_y = max(punkty, key=lambda x: x[1])[1]
+            ax.plot([min_x, max_x, max_x, min_x, min_x], [min_y, min_y, max_y, max_y, min_y], c=border_color, lw=border_width, ls=styl_lini[border_style])
     if wielokat:
-        ax.plot(*zip(*wielokat), c=wielokat_color, lw=wielokat_line_width, ls=styl_lini[wielokat_line_style])
+        if otoczk:
+            ax.plot(*zip(*wielokat), c=wielokat_color, lw=wielokat_line_width, ls=styl_lini[wielokat_line_style])
     fig.canvas.draw()
 
 redraw()
@@ -190,9 +200,12 @@ while True:
         file_path = values['punkty']
         punkty = wczytaj_wielokat(file_path)
         wielokat = []
-    elif event == 'Narysuj otoczke':
+    elif event == 'Oblicz otoczke':
         if not punkty:
             sg.popup_error('Nie wczytano punktów!')
+            continue
+        if len(punkty) < 2:
+            sg.popup_error('Za mało punktów!')
             continue
         wielokat = graham(punkty)
     # grubosc linii
@@ -226,5 +239,14 @@ while True:
     # kolor linii prostokata
     elif event == 'border_color':
         border_color = values['border_color']
+    elif event == '-B-':
+        ogranicz = not ogranicz
+        window['-B-'].update(text='On' if ogranicz else 'Off', button_color=('white on green' if ogranicz else 'white on red'))
+    elif event == '-otczk-':
+        otoczk = not otoczk
+        window['-otczk-'].update(text='On' if otoczk else 'Off', button_color=('white on green' if otoczk else 'white on red'))
+    elif event == '-numeracja-':
+        numeracja = not numeracja
+        window['-numeracja-'].update(text='On' if numeracja else 'Off', button_color=('white on green' if numeracja else 'white on red'))
 
     redraw()
