@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-fig, ax = plt.subplots()
+from collections import deque
 
 def azymut(p1: tuple, p2: tuple) -> float:
     """Oblicza azymut do północy promienia łączącego dwa punkty.
@@ -22,6 +21,19 @@ def azymut(p1: tuple, p2: tuple) -> float:
     # Zamień azymut na zakres od 0 do 2*pi
     azymut_rad = (azymut_rad + 2 * np.pi) % (2 * np.pi)
     return azymut_rad
+
+def skret(p1: tuple, p2: tuple, p3: tuple) -> float:
+    """Oblicza skręt p1, p2, p3.
+
+    Args:
+        p1 (tuple): Pierwszy punkt. (x, y)
+        p2 (tuple): Drugi punkt. (x, y)
+        p3 (tuple): Trzeci punkt. (x, y)
+
+    Returns:
+        float: Skręt.
+    """
+    return np.cross(np.array(p2) - np.array(p1), np.array(p3) - np.array(p1))
 
 def graham(Q: list[tuple]) -> list[tuple]:
     """Zwraca otoczkę wypukłą zbioru punktów.
@@ -43,17 +55,17 @@ def graham(Q: list[tuple]) -> list[tuple]:
     # punktów do otoczki na pewno należy punkt ostatni czyli Pm,
     m = len(Q)
     # 4. zerujemy stos S zapamiętujący punkty otoczki i wprowadzamy na stos punktu Po oraz P1 i P2,
-    S = [Po, Q[0], Q[1]]
+    S = deque([Po, Q[0], Q[1]])
     # 5. od j w zakresie od 3 do m przeglądamy kolejne punkty w nawiązaniu do ostatnich dwóch punktów stosu
     # S sprawdzając kierunek skrętu (wykorzystujemy własność iloczynu wektorowego), do chwili kiedy skręt
     # w ostatnim wierzchołku na stosie do punktu Pj nie jest skrętem w prawo wtedy eliminujemy taki
     # wierzchołek ze stosu dopiero przy skręcie w prawo dodajemy punkt Pj do stosu,
     for j in range(2, m):
-        while len(S) > 1 and np.cross(np.array(S[-1]) - np.array(S[-2]), np.array(Q[j]) - np.array(S[-2])) <= 0:
+        while len(S) > 1 and skret(S[-2], S[-1], Q[j]) <= 0:
             S.pop()
         S.append(Q[j])
     # 6. po przejrzeniu wszystkich punktów stos zawiera otoczkę wypukłą zbioru Q.
-    return S + [Po]
+    return list(S) + [Po]
 
 
         
@@ -98,6 +110,8 @@ def wczytaj_wielokat(sciezka: str) -> list[tuple]:
     # zwrócenie wielokąta
     return wielokat
 
+fig, ax = plt.subplots()
+
 styl_lini = {
     # po polsku
     'linia kropkowa': ':',
@@ -106,10 +120,27 @@ styl_lini = {
     'linia ciagla': '-'
 }
 
+styl_punktu = {
+    # po polsku
+    'kropka': '.',
+    'plus': 'o',
+    'x': 'x',
+    'gwiazdka': '*',
+    'kwadrat': 's',
+    'trójkąt': '^',
+    'diament': 'D',
+    'pentagram': 'p',
+    'hexagram': 'h'
+}
+
 punkt_frame: sg.Frame = sg.Frame('Punkt', [
     [sg.Text('x:'), sg.Input(key='x')],
     [sg.Text('y:'), sg.Input(key='y')]
 ])
+
+default_marker: str = 'kropka'
+default_marker_size: int = 50
+default_marker_color: str = 'red'
 
 default_width: int = 2
 default_style: str = 'linia kreskowa'
@@ -135,16 +166,18 @@ wybierz_punkty = sg.FileBrowse('Wybierz plik z punktami', enable_events=True, ke
 layout = [
     [sg.Graph(canvas_size=(800, 800), graph_bottom_left=(0, 0), graph_top_right=(100, 100), key='graph')],
     [sg.In("", visible=False, enable_events=True, key='punkty'), wybierz_punkty],
+    [sg.Text('Znak punktu:'), sg.Combo(list(styl_punktu.keys()), default_value=default_marker, key='marker', enable_events=True),
+        sg.Text('Rozmiar punktu:'), sg.Combo(list(range(10, 101, 10)), default_value=default_marker_size, key='marker_size', enable_events=True),
+        sg.In("", visible=False, enable_events=True, key='marker_color'), sg.ColorChooserButton('Wybierz kolor punktu', key='marker_color')],
      [sg.Button('Oblicz otoczke', key='Oblicz otoczke'), sg.Text('Otoczka:'), sg.Button('On', size=(3, 1), button_color='white on green', key='-otczk-'), sg.Text('Numeracja punktow:'), sg.Button('On', size=(3, 1), button_color='white on green', key='-numeracja-')],
-    [sg.Text('Grubosc linii:'), line_width_combo, sg.Text('Styl linii:'), line_style_combo,
+    [sg.Text('Grubosc linii otoczki:'), line_width_combo, sg.Text('Styl linii otoczki:'), line_style_combo,
      sg.In("", visible=False, enable_events=True, key='line_color'), line_color_combo],
     #  to samo dla prostokąta
     [sg.Text('Prostokat ograniczajacy:'), sg.Button('On', size=(3, 1), button_color='white on green', key='-B-')],
     [sg.Text('Grubosc linii prostokata:'), sg.Combo(list(range(1, 11)), default_value=default_border_width, key='border_width', enable_events=True),
         sg.Text('Styl linii prostokata:'), sg.Combo(list(styl_lini.keys()), default_value=default_border_style, key='border_style', enable_events=True),
         sg.In("", visible=False, enable_events=True, key='border_color'), sg.ColorChooserButton('Wybierz kolor linii prostokata', key='border_color')],
-    [sg.Text('Podaj wspolzedne punktu:'), punkt_frame, sg.Button('Dodaj punkt', key='Dodaj punkt')],
-    [sg.In("", visible=False, enable_events=True, key='punkt_color'), col_comb]
+    [sg.Text('Podaj wspolzedne punktu:'), punkt_frame, sg.Button('Dodaj punkt', key='Dodaj punkt')]
 ]
 
 # show window in the middle of the screen
@@ -158,6 +191,9 @@ plot_widget.grid(row=0, column=0)
 file_path: str = ''
 wielokat: list[tuple] = []
 wielokat_color = default_color
+marker = default_marker
+marker_size = default_marker_size
+marker_color = default_marker_color
 wielokat_line_width = default_width
 wielokat_line_style = default_style
 border_color = default_border_color
@@ -165,7 +201,6 @@ border_width = default_border_width
 border_style = default_border_style
 punkty: list[tuple] = []
 punkt: tuple = ()
-punkt_color = default_pt_color
 
 def redraw() -> None:
     ax.clear()
@@ -173,7 +208,7 @@ def redraw() -> None:
     ax.set_ylabel('y')
     ax.set_aspect('equal', adjustable='box')
     if punkty:
-        ax.scatter(*zip(*punkty), c=punkt_color)
+        ax.scatter(*zip(*punkty), c=marker_color, marker=styl_punktu[marker], s=marker_size)
         # add a number to the right bottom corner of each point
         if numeracja:
             for i, p in enumerate(punkty):
@@ -208,6 +243,15 @@ while True:
             sg.popup_error('Za mało punktów!')
             continue
         wielokat = graham(punkty)
+    # styl punktu
+    elif event == 'marker':
+        marker = values['marker']
+    # rozmiar punktu
+    elif event == 'marker_size':
+        marker_size = int(values['marker_size'])
+    # kolor punktu
+    elif event == 'marker_color':
+        marker_color = values['marker_color']
     # grubosc linii
     elif event == 'line_width':
         wielokat_line_width = int(values['line_width'])
@@ -227,9 +271,6 @@ while True:
         punkty.append(punkt)
         if wielokat:
             wielokat = graham(punkty)
-    # kolor punktu
-    elif event == 'punkt_color':
-        punkt_color = values['punkt_color']
     # grubosc linii prostokata
     elif event == 'border_width':
         border_width = int(values['border_width'])
